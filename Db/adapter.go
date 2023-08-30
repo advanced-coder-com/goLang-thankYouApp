@@ -2,7 +2,6 @@ package Db
 
 import (
 	"database/sql"
-	"fmt"
 	"strconv"
 	handler "thankYou/Handler"
 )
@@ -22,15 +21,18 @@ type Condition struct {
 	LogicOperator string
 }
 
+// Constructor
 func NewDbAdapter() DbAdapter {
 	var err error
 	subject := DbAdapter{}
+	checkDbDirectory(DB_DIR_NAME)
 	subject.db, err = sql.Open("sqlite3", DB_NAME)
 	handler.Handle(err)
 	checkDb(subject.db)
 	return subject
 }
 
+// Get record by Id (int)
 func (DbAdapter DbAdapter) GetById(tableName string, id int) *sql.Row {
 	var sql string
 	sql += getSelect(tableName)
@@ -39,6 +41,24 @@ func (DbAdapter DbAdapter) GetById(tableName string, id int) *sql.Row {
 	return DbAdapter.db.QueryRow(sql)
 }
 
+// Get record by string value
+func (DbAdapter DbAdapter) GetByField(tableName string, fieldName string, fieldValue string) *sql.Row {
+	var sql string
+	sql += getSelect(tableName)
+	conditions := []Condition{{Column: fieldName, Value: "'" + fieldValue + "'", Predicate: "="}}
+	sql += getWhere(conditions)
+	return DbAdapter.db.QueryRow(sql)
+}
+
+// Get random record
+func (DbAdapter DbAdapter) GetRandom(tableName string) *sql.Row {
+	var sql string
+	sql += getSelect(tableName)
+	sql += " ORDER BY RANDOM() LIMIT 1"
+	return DbAdapter.db.QueryRow(sql)
+}
+
+// Get list of records by conditions
 func (DbAdapter DbAdapter) GetList(tableName string, conditions []Condition) *sql.Rows {
 	var sql string
 	sql += getSelect(tableName)
@@ -52,38 +72,32 @@ func (DbAdapter DbAdapter) GetList(tableName string, conditions []Condition) *sq
 	return rows
 }
 
-func (DbAdapter DbAdapter) GetCount(tableName string) int {
-	var cnt int
-	_ = DbAdapter.db.QueryRow(`select count(*) from ` + tableName).Scan(&cnt)
-	return cnt
+func (DbAdapter DbAdapter) Insert(tableName string, values [][]string) error {
+	var sql string
+	sql += getInsert(tableName)
+	sql += getInsertValues(values)
+	_, err := DbAdapter.db.Exec(sql)
+	return err
 }
 
-func (DbAdapter DbAdapter) GetDb() *sql.DB {
-
-	return DbAdapter.db
+func (DbAdapter DbAdapter) Update(tableName string, values [][]string, conditions []Condition) error {
+	var sql string
+	sql += getUpdate(tableName)
+	sql += getUpdateValues(values)
+	sql += getWhere(conditions)
+	_, err := DbAdapter.db.Exec(sql)
+	return err
 }
 
+func (DbAdapter DbAdapter) Delete(tableName string, conditions []Condition) error {
+	var sql string
+	sql += getDelete(tableName)
+	sql += getWhere(conditions)
+	_, err := DbAdapter.db.Exec(sql)
+	return err
+}
+
+// Destructor
 func (DbAdapter DbAdapter) CloseDb() {
 	DbAdapter.db.Close()
-}
-
-func getSelect(tableName string) string {
-	return fmt.Sprintf("SELECT * FROM %s", tableName)
-}
-
-func getWhere(conditions []Condition) string {
-	if len(conditions) == 0 {
-		return ""
-	}
-	var result = " WHERE"
-	for index, condition := range conditions {
-		var row string
-		if index > 0 {
-			row += fmt.Sprintf(" %s", condition.LogicOperator)
-		}
-
-		row += fmt.Sprintf(" %s%s%s", condition.Column, condition.Predicate, condition.Value)
-		result += row
-	}
-	return result
 }

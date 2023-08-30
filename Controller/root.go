@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+	Console "thankYou/Console"
 	"thankYou/Db"
 	ThankYouModel "thankYou/Model"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -53,40 +53,12 @@ func run(args []string) {
 		if len(results) == 0 {
 			noResultsPrint()
 		}
-
-		prettyPrint(results)
-
+		Console.PrettyPrint(results)
 	} else {
 		row := ThankYouModel.GetRandom()
-		prettyPrint([]ThankYouModel.ThankYou{row})
+		Console.PrettyPrint([]ThankYouModel.ThankYou{row})
 	}
 
-}
-
-func prettyPrint(rows []ThankYouModel.ThankYou) {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Value", "Language", "Lang Code"})
-
-	var data [][]string
-
-	for _, object := range rows {
-		data = append(data, object.ToArray())
-	}
-
-	// Append data to the table
-	for _, v := range data {
-		table.Append(v)
-	}
-
-	// Set table formatting options
-	table.SetBorder(true)
-	table.SetCenterSeparator("|")
-	table.SetColumnSeparator("|")
-	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-
-	// Render the table
-	table.Render()
 }
 
 func noResultsPrint() {
